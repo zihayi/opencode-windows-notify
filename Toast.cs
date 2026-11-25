@@ -19,8 +19,10 @@ internal static class OpenCodeNotify {
                     key.SetValue("DisplayName", "OpenCode", RegistryValueKind.String);
                     key.SetValue("ShowInSettings", 1, RegistryValueKind.DWord);
                 }
-                Console.WriteLine("Registered OpenCode.CLI"); return 0;
+                ClickTarget.Register();
+                Console.WriteLine("Registered OpenCode.CLI and notification clicks"); return 0;
             }
+            if (mode == "unregister") { ClickTarget.Unregister(); return 0; }
             if (mode == "history") {
                 foreach (var toast in ToastNotificationManager.History.GetHistory(Id))
                     if (toast.Group == Group) Console.WriteLine(toast.Tag);
@@ -49,10 +51,20 @@ internal static class OpenCodeNotify {
             }
             stage = "CreateToast";
             var xml = new XmlDocument();
-            xml.LoadXml("<toast><visual><binding template='ToastGeneric'><text>" + title + "</text><text>" + text + "</text></binding></visual></toast>");
+            xml.LoadXml("<toast><visual><binding template='ToastGeneric'><text/><text/></binding></visual></toast>");
+            string preview = Environment.GetEnvironmentVariable("OPENCODE_NOTIFY_TEXT");
+            var lines = xml.GetElementsByTagName("text");
+            lines[0].InnerText = title;
+            lines[1].InnerText = String.IsNullOrWhiteSpace(preview) ? text : preview;
+            var expires = DateTimeOffset.Now.AddHours(8);
+            string target = ClickTarget.Create(expires);
+            if (target != null) {
+                xml.DocumentElement.SetAttribute("activationType", "protocol");
+                xml.DocumentElement.SetAttribute("launch", target);
+            }
             var message = new ToastNotification(xml);
             message.Tag = args[1]; message.Group = Group;
-            message.ExpirationTime = DateTimeOffset.Now.AddHours(8);
+            message.ExpirationTime = expires;
             if (args.Length == 3 && args[2] == "quiet") message.SuppressPopup = true;
             stage = "Show";
             notifier.Show(message);

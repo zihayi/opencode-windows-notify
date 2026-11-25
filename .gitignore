@@ -1,4 +1,5 @@
 /OpenCodeNotify.exe
+/OpenCodeNotify.Focus.exe
 node_modules/
 *.log
 .env
